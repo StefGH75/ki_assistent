@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.build/
+
+# Umgebungen
+.venv/
+venv/
+env/
+
+# OS und IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Konfiguration und Secrets
+.env
+*.env
+*.secret
+*.key
+*.pem
+
+# Logs
+*.log

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <!--responsives Verhalten, Startzoom 1:1, keine automatische Verkleinerung--> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Stefanies KI-Assistent</title>
+    <style>
+        
+        * {
+            box-sizing: border-box; /* Padding und Border zählen zur Gesamtbreite. Verhindert Layout-Überraschungen*/
+        }
+
+        body { /* Schrift, Farbverlauf als Hintergrund, neutrale Textfarbe, mobilefreundliches Padding, 100% Höhe */
+
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            margin: 0;
+            padding: 15px;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container { /* zentriert, max 700px, weiße Karte, runde Ecken, Schatten */
+            max-width: 700px;
+            width: 100%;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px 15px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        h2 { /* zentriert, Farbe, clamp(...) für fluides Font-Scaling, word-wrap gegen Überläufe */
+            text-align: center;
+            color: #44237e;
+            margin-bottom: 10px;
+            font-size: clamp(18px, 5vw, 28px);
+            word-wrap: break-word;
+        }
+
+        .subtitle { /* leichte Sekundärfarbe, kleiner, Zeilenhöhe für Lesbarkeit */
+            text-align: center;
+            color: #666;
+            font-size: clamp(13px, 3.5vw, 15px);
+            line-height: 1.4;
+            margin-bottom: 20px;
+        }
+
+        .buttons { /*4 Spalten x 2 Reihen, 8px Abstand, im Mobile-Block später 2 Spalten */
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .buttons button { /*helle Kapseln, kleine Schrift, zentriert, Hover hebt leicht an, aktive Zustände.
+            white-space: normal und hyphens: auto erlauben Umbrüche in schmalen Spalten.*/
+            height: 42px;
+            background: #eef2f7;
+            border: 1px solid #ccc;
+            border-radius: 18px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            white-space: normal;
+            line-height: 1.2;
+            word-wrap: break-word;
+            hyphens: auto;
+            transition: all 0.2s ease;
+        }
+
+        .buttons button:hover { /*Anpassung während Button gehovert wird */
+            background: #dde7f0;
+            transform: translateY(-1px); /*hebt den Button minimal an */
+        }
+    
+        .buttons button:active {
+            transform: translateY(0); /* 0 setzt Button wieder auf Ausgangsposition */
+        }
+
+        form { /* Spaltenlayout auf mobile */
+            display: flex; /* macht das <form> zum Flex-Container */
+            flex-direction: column; /* untereinander statt nebeneinander */
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        input[type="text"] { /* Style der Textfelder */
+            width: 100%;
+            padding: 14px 12px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background: #fff;
+            transition: border-color 0.2s ease;
+        }
+
+        input[type="text"]::placeholder {
+            font-size: 13px;
+            color: #888;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;  /* Rahmen färbt sich blau beim Fokus */
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); /* weicher Fokus-Ring um das Feld */
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 20px;
+            cursor: pointer; /* Handcursor */
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s ease; /* sanfte Animationen bei Änderungen */
+        }
+
+        button[type="submit"]:hover {
+            transform: translateY(-1px); /* Button hebt sich leicht an */
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); /* zarter Schatten beim Hover */
+        }
+
+        .answer p { /* Stylt Absätze innerhalb der answer-Box */
+            margin: 0;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        /* Schnellere Animationen für bessere Performance */
+        .buttons button, button[type="submit"], input[type="text"] {
+            transition: all 0.15s ease;
+        }
+
+        .answer {
+            margin-top: 25px;
+            background-color: #f0f4ff;
+            padding: 18px 15px;
+            border-left: 5px solid #667eea;
+            border-radius: 8px;
+            overflow-wrap: break-word; /* Zeilenumbruch bei langen Wörtern (Alias) */
+            hyphens: auto; /* automatische Silbentrennung, wo unterstützt */
+        }       
+    
+        .answer h3 { /* Style Überschrift */
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: #44237e;
+            font-size: 16px;
+        }
+
+        .loading { /* Stlye fürs Laden */
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #667eea;
+            font-style: italic; /* dezenter, „wartender“ Look */
+        }
+
+        .loading::before {
+            content: "⏳";  /* dekoratives Icon vor dem Text */
+            animation: pulse 1.5s infinite; /*nutzt den pulse mit Dauer 1,5s pro Zyklus, wiederholt sich unendlich  */
+        }
+
+        @keyframes pulse { /* Animation */
+            0%, 100% { opacity: 1; } /* Start und Ende: voll sichtbar */
+            50% { opacity: 0.5; } /* Mitte: halb transparent */
+        }
+        
+        button:disabled { /* Grundzustand für deaktivierte Buttons */
+            opacity: 0.6; /* visuelles Feedback, etwas transparenter */
+            cursor: not-allowed; /* setzt den Mauszeiger auf ein Verbotssymbol, wenn er über das Element fährt */
+        }
+
+        /* Mobile optimizations: Media Query greift bei Viewports bis 480 px Breite und macht die UI kompakter */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 15px 12px;
+            }
+
+            .buttons { /* von 4 Spalten auf 2 Spalten, 4 Reihen, kleinerer Abstand. So passen die Schnellwahl-Buttons gut auf kleine Screens */
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(4, 1fr);
+                gap: 6px;
+            }
+
+            .buttons button { /* geringere Höhe, kleinere Schrift, weniger Padding */
+                height: 38px;
+                font-size: 10px;
+                padding: 6px 8px;
+            }
+
+            form {
+                gap: 10px;
+            }
+
+            input[type="text"] {
+                padding: 12px 10px;
+                font-size: 14px;
+            }
+
+            input[type="text"]::placeholder {
+                font-size: 12px;
+            }
+
+            button[type="submit"] {
+                padding: 12px 16px;
+            }
+
+            .answer {
+                padding: 15px 12px;
+            }
+        }
+
+        /* Tablet und größere Bildschirme ab 600px Breite*/
+        @media (min-width: 600px) {
+            body {
+                padding: 20px;
+            }
+
+            .container {
+                padding: 25px;
+            }
+
+            form {
+                flex-direction: row;
+                gap: 0;
+            }
+
+            input[type="text"] {
+                border-radius: 8px 0 0 8px;
+                border-right: none;
+            }
+
+            button[type="submit"] {
+                width: auto;
+                min-width: 120px;
+                border-radius: 0 8px 8px 0;
+            }
+
+            .buttons { /* Schnellwahl als 4-Spalten-Grid mit größerem Abstand */
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .buttons button {
+                font-size: 12px;
+                height: 44px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🤖 Stefanies KI-Assistent</h2>
+        <div class="subtitle">Stelle Fragen über meinen beruflichen Werdegang</div>
+
+        <div class="buttons"> <!--onclick="sendFrage('...')" setzt die vordefinierte Frage und löst die Anfrage aus-->
+            <button type="button" onclick="sendFrage('Was sind ihre technischen Fähigkeiten?')">Technische Skills</button>
+            <button type="button" onclick="sendFrage('Welche Programmier- und Datenbanksprachen kann sie anwenden?')">Programmiersprachen</button>
+            <button type="button" onclick="sendFrage('Was zeichnet sie für eine Data-Science-Stelle aus?')">Data-Science Eignung</button>
+            <button type="button" onclick="sendFrage('Welche KI-Kenntnisse besitzt sie?')">KI-Kenntnisse</button>
+            <button type="button" onclick="sendFrage('Berufserfahrung')">Berufserfahrung</button>
+            <button type="button" onclick="sendFrage('Welche Projekte hat sie umgesetzt (Projekte.pdf)? Liste alle inklusive den Chatbots auf und beschreibe kurz.')">Projekte</button>
+            <button type="button" onclick="sendFrage('Welche Soft Skills besitzt sie?')">Soft Skills</button>
+            <button type="button" onclick="sendFrage('Besitzt sie Führungskompetenz?')">Leadership</button>
+        </div>
+
+        <form id="frageForm"> <!--Container für die Eingabe-->
+            <input type="text" name="frage" id="frageInput" placeholder="Stelle deine Frage über Stefanies beruflichen Hintergrund..." required>
+            <button type="submit">Senden</button> <!-- löst das Absenden aus. Enter im Input triggert ebenfalls den Submit-->
+        </form>
+
+        <!--Container für die Antwort-->
+        <div id="answerContainer" class="answer" style="display:none;"> <!--Bereich anfangs versteckt, JS blendet ihn beim Senden ein-->
+            <h3>Antwort:</h3>
+            <p id="answerText"></p>
+        </div>
+    </div>
+
+    <script>
+        async function sendFrage(frage) {
+            document.getElementById("frageInput").value = frage; // setzt den Text ins Feld
+            await submitFrage(frage); // abschicken und warten, bis die Antwort da ist
+        }
+
+        document.getElementById("frageForm").addEventListener("submit", async function(e) {
+            e.preventDefault(); // verhindert Seitenreload
+            const frage = document.getElementById("frageInput").value.trim(); // Text holen und trimmen (Leerzeichen entfernt, prüft auf Leere)
+            if (frage) {
+                await submitFrage(frage); // ruft submitFrage auf, wenn nicht leer, await: verhindert doppelte Abläufe bis die Anfrage fertig ist
+            }
+        });
+
+        async function submitFrage(frage) {
+            const submitButton = document.querySelector('button[type="submit"]'); // erster Submit-Button im Dokument
+            const answerText = document.getElementById("answerText"); // Container für die Antwort
+            const answerContainer = document.getElementById("answerContainer"); // Box rund um die Antwort
+
+            try {
+                // Sofortiges Feedback - UI in den Ladezustand versetzen:
+                submitButton.disabled = true; // deaktiviert den Senden-Button. Schutz vor Doppelklicks und mehrfachen Requests
+                submitButton.textContent = "Lädt..."; // ändert die Beschriftung, damit sofort ersichtlich ist, dass etwas passiert
+                answerText.innerHTML = '<div class="loading">Antwort wird generiert...</div>';
+                answerContainer.style.display = "block"; // blendet den Antwortbereich ein, falls er noch versteckt war
+
+                // Timeout für langsame Verbindungen:
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+                // Anfrage an das Flask Backend senden:
+                const response = await fetch("/frage", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Cache-Control": "no-cache"
+                    },
+                    body: JSON.stringify({ frage }), // macht aus { frage: "..."} einen JSON-String
+                    signal: controller.signal // ermöglicht Abbruch per AbortController/Timeout
+                });
+
+                clearTimeout(timeoutId); // hebt den mit setTimeout(...) gestarteten Timer wieder auf
+                   
+                // HTTP Fehlern behandeln:
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                   
+                // Antwort-JSON lesen:
+                const data = await response.json();
+
+                // Erfolg oder Fehlermeldung anzeigen:
+                if (data.answer) {
+                    answerText.innerHTML = data.answer.replace(/\n/g, "<br>"); // Antwort ausgegeben und Zeilenumbrüche \n in <br> konvertiert
+                } else if (data.error) { // falls data.error, wird rote Fehlermeldung gezeigt:
+                    answerText.innerHTML = `<span style="color: #e74c3c;">Fehler: ${data.error}</span>`;
+                } else {
+                    answerText.innerHTML = '<span style="color: #e74c3c;">Unerwartete Antwort vom Server</span>';
+                }
+
+            } catch (err) {
+                // Fehlerfälle differenziert behandeln:
+                if (err.name === 'AbortError') { //gesetzter Timeout hat den Fetch abgebrochen
+                    answerText.innerHTML = '<span style="color: #e74c3c;">Zeitüberschreitung - Bitte versuchen Sie es erneut</span>';
+                } else if (err.message.includes('Failed to fetch')) { // typischer Netzwerkfehler des Browsers, z.B. Server nicht erreichbar
+                    answerText.innerHTML = '<span style="color: #e74c3c;">Verbindungsfehler - Bitte überprüfen Sie Ihre Internetverbindung</span>';
+                } else {
+                    answerText.innerHTML = `<span style="color: #e74c3c;">Fehler: ${err.message}</span>`;
+                }
+            } finally {
+                // läuft immer, egal ob Erfolg oder Fehler, setz UI zurück:
+                submitButton.disabled = false; // Button wieder klickbar
+                submitButton.textContent = "Senden"; // Beschriftung zurück
+            }
+        }
+    </script>
+</body>
+</html>
